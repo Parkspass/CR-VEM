@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<title>Parks Count Zion</title>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+<script src="https://code.jquery.com/jquery-3.4.1.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+<script>
+var parkName = "Zion";
+var countLock = false;
+var countAdjust = 0;
+var lastAdjust = 0;
+var locationName = '';
+function init(){
+	$.getJSON('../getLocationList.php?park='+parkName, function(data){
+		var o = new Option("Select Location", "");
+		$("#locationSelect").append(o);
+		for(var i=0; i < data.length; i++){
+			//console.log(data[i]);
+			o = new Option(data[i], data[i]);
+			$("#locationSelect").append(o);
+		}
+	});
+	
+	setInterval(checkCount, 10000);
+	//$("#capacitylabel").hide();
+}
+
+function plusCount(){
+	countAdjust++;
+	if(countAdjust != 0 && countLock == false && locationName != ''){
+		sendAdjust();
+	}
+}
+
+function minusCount(){
+	countAdjust--;
+	if(countAdjust != 0 && countLock == false && locationName != ''){
+		sendAdjust();
+	}
+}
+
+function checkCount(){
+	if(lastAdjust < (Date.now() - 10000) && countLock == false && locationName != ''){
+		sendAdjust();
+	}
+}
+
+function setLocationName(){
+	locationName = $("#locationSelect").val();
+	if(locationName == 'undefined' || locationName == '' || locationName == null){
+		
+	}else{
+		console.log("locationName: " + locationName);
+	}
+}
+
+
+function sendAdjust(){
+	countLock = true;
+	var toSend = countAdjust;
+	lastAdjust = Date.now();
+	countAdjust = 0;
+	//var location = $("#locationSelect").children("option:selected").val();
+	var name = $("#name").val();
+	if(name == 'undefined' || name == '' || name == null){console.log("No name, default");name = "UNK";}
+	var entrance = $("#entrance").val();
+	if(entrance == 'undefined' || entrance == '' || entrance <= 0){console.log("No entrance, default");entrance = 1;}
+	var url = './adjust_location_count.php?park='+parkName+'&location='+locationName+'&entrance='+entrance+'&user='+name+'&count='+toSend;
+	console.log(url);
+	$.getJSON(url, function(data){
+		console.log(data);
+		$('#currentCapacity').html(data.count);
+		if(parseInt(data.count) >= parseInt(data.capacity)){
+			$("#capacitylabel").html("AT CAPACITY").css("color","red");
+		}else{
+			$("#capacitylabel").html("CAPACITY").css("color","black");
+		}
+	}).fail(function(){
+		console.log("failed, reset");
+		countAdjust += toSend;
+	}).always(function(){
+		console.log("done");
+		countLock = false;
+	});
+}
+</script>
+<style>
+.header{
+	background: #FFFFFF;
+	box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+}
+label{
+	font-family: Roboto;
+	font-size: 18px;
+}
+
+.roundbtn{
+	touch-action: manipulation;
+	margin-left:1.5em;
+	margin-right:1.5em;
+}
+
+#currentCapacity{
+	font-family: Roboto;
+	font-size: 24px;
+	font-weight: bold;
+	margin-top: 1.5em;
+}
+
+#capacitylabel{
+	font-family: Roboto;
+	font-weight: bold;
+	text-align: center;
+	
+}
+</style>
+</head>
+<body onload="init();" style="font-family: Roboto;">
+	<div class="container-fluid header">
+		<img class="float-left" src='../images/bison.svg' height='20px' style='margin-top:10px'><h2 class='float_left' style='margin-left: 1.5em; font-family: Roboto Slab;'>Parks Count</h2>
+	</div>
+	<div class="container">
+	<form style='max-width:700px;'>
+	<div class="form-group row">
+		<label for="name" class='col-sm-2 col-form-label'>Your name</label>
+		<div class="col-sm-10"><input type='text' class="form-control" id="name" name='name' pattern="[a-zA-Z ]*" tabindex=1 ></input></div>
+	</div>
+	<div class="form-group row">
+		<label for="locationSelect" class='col-sm-2 col-form-label'>Select Location</label>
+		<div class="col-sm-10"><select class="form-control" id="locationSelect" onChange='setLocationName()' tabindex=2></select></div>
+	</div>
+	<div class="form-group row">
+		<label for="entranceNum" class='col-sm-2 col-form-label'>Entrance</label>
+		<div class="col-sm-10"><input class="form-control" type='number' pattern="[0-9]{1,2}" id="entrance" value='1' name='entrance' tabindex=3></input></div>
+	</div>
+	<div class="form-group row">
+		<label for="notes" class='col-sm-2 col-form-label'>Notes (NYI)</label>
+		<div class="col-sm-10"><input class="form-control" type='text' id="notes" name='notes' disabled tabindex=4></input></div>
+	</div>
+	<div class="d-flex justify-content-center">
+	<img class="roundbtn" src="../images/minus_btn.svg" height='120px' onClick="minusCount();" />
+	<div id='currentCapacity'>N/A</div>
+	<img class="roundbtn" src="../images/plus_btn.svg" height='120px' onClick="plusCount();" />
+	</div>
+	</form>
+	<div id='capacitylabel'>CAPACITY</div>
+	</div>
+</body>
+</html>
